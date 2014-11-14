@@ -1,0 +1,25 @@
+#!/bin/bash
+
+CURRENT_PATH=$(cd `dirname $0`; pwd)
+TARGET_DIR=$CURRENT_PATH/output
+
+DEBUG_CONFIG="  --enable-debug=3 "
+
+config_ffmpeg_x86() {
+	echo "     config FFmpeg library may take some more time ...   "
+	./configure   \
+		--prefix="$TARGET_DIR" \
+		--disable-doc				\
+		--disable-yasm		       	\
+		--disable-hwaccels			\
+		--disable-inline-asm		       	\
+		--extra-cflags=" -fgnu89-inline " \
+		--disable-stripping			\
+		--enable-static 			\
+		$DEBUG_CONFIG	;					
+
+	make && make install 
+	exit 0
+}
+
+config_ffmpeg_x86
