@@ -1,0 +1,52 @@
+#!/bin/bash
+
+CURRENT_PATH=$(cd `dirname $0`; pwd)
+TARGET_DIR=$CURRENT_PATH/output
+CP_DST_DIR=$CURRENT_PATH/../../liboutput
+
+DEBUG_CONFIG="  --enable-debug=3 "
+
+handle_install()
+{
+	SRC_DIR=$TARGET_DIR
+	echo "     cp FFmpeg library to $CP_DST_DIR ...   "
+
+	mkdir -p  $CP_DST_DIR/ffmpeg/lib
+	mkdir -p  $CP_DST_DIR/ffmpeg/include
+
+	rm $CP_DST_DIR/libavutil	-rf
+	rm $CP_DST_DIR/libavformat		-rf
+	rm $CP_DST_DIR/libavcodec 		-rf
+
+	cp $SRC_DIR/include/* -rf $CP_DST_DIR/ffmpeg/include/.
+	cp $SRC_DIR/lib/*.a $CP_DST_DIR/ffmpeg/lib/.
+}
+
+config_ffmpeg_x86() {
+	echo "     config FFmpeg library may take some more time ...   "
+	./configure   \
+		--prefix="$TARGET_DIR" \
+		--disable-programs \
+		--disable-doc				\
+		--disable-yasm		       	\
+		--disable-hwaccels			\
+		--disable-inline-asm		       	\
+		--extra-cflags=" -fgnu89-inline " \
+		--disable-stripping			\
+		--enable-static 			\
+		$DEBUG_CONFIG	;					
+}
+
+function _build_ffmpegbase() 
+{
+	config_ffmpeg_x86
+
+	make || exit 1
+	make install || exit 1
+	handle_install
+	make uninstall
+	make distclean
+	echo "     Congratulations!!!   "
+}
+
+_build_ffmpegbase
