@@ -2,7 +2,6 @@
 
 CURRENT_PATH=$(cd `dirname $0`; pwd)
 TARGET_DIR=$CURRENT_PATH/output
-<<<<<<< HEAD
 CP_DST_DIR=$CURRENT_PATH/../../liboutput
 
 DEBUG_CONFIG="  --enable-debug=3 "
@@ -23,19 +22,11 @@ handle_install()
 	cp $SRC_DIR/lib/*.a $CP_DST_DIR/ffmpeg/lib/.
 }
 
-=======
-
-DEBUG_CONFIG="  --enable-debug=3 "
-
->>>>>>> 3b46b43bb5902163f3d66450aa7f9543e284a64c
 config_ffmpeg_x86() {
 	echo "     config FFmpeg library may take some more time ...   "
 	./configure   \
 		--prefix="$TARGET_DIR" \
-<<<<<<< HEAD
 		--disable-programs \
-=======
->>>>>>> 3b46b43bb5902163f3d66450aa7f9543e284a64c
 		--disable-doc				\
 		--disable-yasm		       	\
 		--disable-hwaccels			\
@@ -44,7 +35,6 @@ config_ffmpeg_x86() {
 		--disable-stripping			\
 		--enable-static 			\
 		$DEBUG_CONFIG	;					
-<<<<<<< HEAD
 }
 
 function _build_ffmpegbase() 
@@ -60,11 +50,5 @@ function _build_ffmpegbase()
 }
 
 _build_ffmpegbase
-=======
-
-	make && make install 
-	exit 0
-}
 
 config_ffmpeg_x86
->>>>>>> 3b46b43bb5902163f3d66450aa7f9543e284a64c
