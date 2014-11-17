@@ -50,5 +50,3 @@ function _build_ffmpegbase()
 }
 
 _build_ffmpegbase
-
-config_ffmpeg_x86
