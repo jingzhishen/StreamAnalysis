@@ -61,6 +61,8 @@ private slots:
 
     void on_btn_stop_clicked();
 
+    void on_btn_execsql_clicked();
+
 private:
 	Ui::MainWindow *ui;
 

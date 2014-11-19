@@ -28,11 +28,17 @@ UnPackAudioInfo UnpackThread::getUnpackAudioInfo(VPacketInfo &vPacketInfo, int s
 	info.nFrameCount = vPacketInfo.size();
 	unsigned long long nTotalSize = 0;
 
+    info.ptsContinue.nFlag = 1;
     info.nStreamIndex = stream_index;
 	for(int i = 0; i < vPacketInfo.size(); i++){
 		nTotalSize += vPacketInfo[i].size;
 		info.nMaxPacketSize = qMax(info.nMaxPacketSize, vPacketInfo[i].size);
 		info.nMinPacketSize = qMin(info.nMinPacketSize, vPacketInfo[i].size);
+
+        if(info.ptsContinue.nFlag && i > 0 && vPacketInfo[i].pts < vPacketInfo[i-1].pts){
+            info.ptsContinue.nFlag = 0;
+            info.ptsContinue.pts = vPacketInfo[i].pts;
+        }
 	}
     info.nAvePacketSize = nTotalSize / vPacketInfo.size();
 
@@ -49,18 +55,23 @@ UnPackVideoInfo UnpackThread::getUnpackVidioInfo(VPacketInfo &vPacketInfo, int s
 	UnPackVideoInfo info;
 
 	if(vPacketInfo.size() == 0)return info;
-	memset(&info, 0, sizeof(UnPackVideoInfo));
     QVector<int> vKeyFrame;
+    unsigned long long nTotalSize = 0;
 
-
+    memset(&info, 0, sizeof(UnPackVideoInfo));
 	info.nFrameCount = vPacketInfo.size();
-	unsigned long long nTotalSize = 0;
-
+    info.ptsContinue.nFlag = 1;
     info.nStreamIndex = stream_index;
-	for(int i = 0; i < vPacketInfo.size(); i++){
+
+    for(int i = 0; i < vPacketInfo.size(); i++){
 		nTotalSize += vPacketInfo[i].size;
 		info.nMaxPacketSize = qMax(info.nMaxPacketSize, vPacketInfo[i].size);
 		info.nMinPacketSize = qMin(info.nMinPacketSize, vPacketInfo[i].size);
+
+        if(info.ptsContinue.nFlag && i > 0 && vPacketInfo[i].pts < vPacketInfo[i-1].pts){
+            info.ptsContinue.nFlag = 0;
+            info.ptsContinue.pts = vPacketInfo[i].pts;
+        }
 
         if(vPacketInfo[i].flags == 1){
 			info.nKeyFrameCount++;
@@ -196,7 +207,7 @@ void UnpackThread::run()
             if(pkt.dts == AV_NOPTS_VALUE)
                 pkt.dts = -1;
             if(pkt.pts == AV_NOPTS_VALUE)
-                pkt.pts = -1;
+                pkt.pts = pkt.dts;
             QMap<int, VPacketInfo>::iterator iter = mPackets.find(pkt.stream_index);
             if(iter != mPackets.end()){
                 PacketInfo info;

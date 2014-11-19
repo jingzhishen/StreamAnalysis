@@ -4,6 +4,10 @@
 #include <QMetaType>
 const int MAX_AUDIO_STREAM = 10;
 
+typedef struct{
+    int nFlag;//pts是否连续,1:连续(默认)，0：不连续
+    long long pts;
+}PtsContinue;
 
 typedef struct{
     int nStreamIndex;
@@ -18,6 +22,8 @@ typedef struct{
 
     int nFrameCount;//packet 个数总大小
     int nKeyFrameCount;
+
+    PtsContinue ptsContinue;
 }UnPackVideoInfo;
 
 typedef struct{
@@ -28,6 +34,8 @@ typedef struct{
     int nAvePacketSize;//平均大小
 
     int nFrameCount;//packet 个数总大小
+
+    PtsContinue ptsContinue;
 }UnPackAudioInfo;
 
 typedef struct{

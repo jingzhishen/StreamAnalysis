@@ -214,7 +214,7 @@ void MainWindow::slot_set_unpack_info(UnPackInfo info)
 	int nAudioCount = 0;
 
 	if(info.videoInfo.nFrameCount > 0){
-		result.append("video => ").append("stream index->").append(QString::number(info.videoInfo.nStreamIndex)).append(":\n");
+        result.append("video index=> ").append(QString::number(info.videoInfo.nStreamIndex)).append(":\n");
 		result.append("packet=> ");
 		result.append("max: ").append(QString::number(info.videoInfo.nMaxPacketSize)).append(" ");;
 		result.append("min: ").append(QString::number(info.videoInfo.nMinPacketSize)).append(" ");
@@ -224,18 +224,27 @@ void MainWindow::slot_set_unpack_info(UnPackInfo info)
 		result.append("min: ").append(QString::number(info.videoInfo.dMinInterval)).append(" ");
 		result.append("ave: ").append(QString::number(info.videoInfo.dAveInterval)).append(" ");
 
-		result.append("\nframecount: ").append(QString::number(info.videoInfo.nFrameCount)).append(" ");
-		result.append("keyframecount: ").append(QString::number(info.videoInfo.nKeyFrameCount)).append(" ");
+        result.append("\ncontinue=> ").append(QString::number(info.videoInfo.ptsContinue.nFlag)).append(" ");
+        if(!info.videoInfo.ptsContinue.nFlag)
+            result.append("pts: ").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
+
+        result.append("\nnframe: ").append(QString::number(info.videoInfo.nFrameCount)).append(" ");
+        result.append("nkeyframe: ").append(QString::number(info.videoInfo.nKeyFrameCount)).append(" ");
 		result.append("\n");
 	}
 	while(nAudioCount < info.nAudioCount){
 		if(info.audioInfo[nAudioCount].nFrameCount > 0){
-			result.append("audio => ").append("stream index->").append(QString::number(info.audioInfo[nAudioCount].nStreamIndex)).append(":\n");
+            result.append("audio index=> ").append(QString::number(info.audioInfo[nAudioCount].nStreamIndex)).append(":\n");
 			result.append("packet=> ");
 			result.append("max: ").append(QString::number(info.audioInfo[nAudioCount].nMaxPacketSize)).append(" ");
 			result.append("min: ").append(QString::number(info.audioInfo[nAudioCount].nMinPacketSize)).append(" ");
 			result.append("ave: ").append(QString::number(info.audioInfo[nAudioCount].nAvePacketSize)).append(" ");
-			result.append("\nframecount:").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
+
+            result.append("\ncontinue=> ").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.nFlag)).append(" ");
+            if(!info.audioInfo[nAudioCount].ptsContinue.nFlag)
+                result.append("pts: ").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
+
+            result.append("\nnframe:").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
 			result.append("\n");
 
 			nAudioCount++;
@@ -346,8 +355,8 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 
 	QString sql;
 	QString result;
-	QString result_start="The first 32B:";
-	QString result_end	="The last	32B:";
+    QString result_start="32FB:";
+    QString result_end	="32LB:";
 
 	db.open();
 	int id = ui->tvw_unpack->model()->index(index.row(),0).data().toString().toInt();
@@ -362,7 +371,7 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 		result.append(result_start);
 		for(int i = 0; i < data_start.length(); i++){
 			char tmp[3];
-			snprintf(tmp,sizeof(tmp),"%02x",(data_start.data())[i]);
+            snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_start.data())[i]));
 			result.append(tmp).append(" ");
 		}
 		result.append("\n");
@@ -370,7 +379,7 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 		result.append(result_end);
 		for(int i = 0; i < data_end.length(); i++){
 			char tmp[3];
-			snprintf(tmp,sizeof(tmp),"%02x",(data_end.data())[i]);
+            snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_end.data())[i]));
 			result.append(tmp).append(" ");
 		}
 
@@ -405,4 +414,21 @@ void MainWindow::on_btn_stop_clicked()
 		m_waitCond.wakeAll();
 	}
 	unlock();
+}
+
+void MainWindow::on_btn_execsql_clicked()
+{
+    QString where = ui->txt_where->text().trimmed();
+    if(where.length() < 5)
+        return;
+    lock();
+    if(getUnpackStatus() &	(UNPACK_FINISH | UNPACK_STOP)){
+        QString sql = SQL_SELECT + where;
+        bindTableView(sql);
+    }else{
+        unlock();
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+        return;
+    }
+    unlock();
 }
