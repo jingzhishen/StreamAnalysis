@@ -2,7 +2,7 @@
 #define ANALYSISTYPE_H
 
 #include <QMetaType>
-const int MAX_AUDIO_STREAM = 10;
+const int MAX_AUDIO_STREAM = 100;
 
 typedef struct{
     int nFlag;//pts是否连续,1:连续(默认)，0：不连续
@@ -48,7 +48,7 @@ typedef struct{
     int stream;
     int flags;
     int size;
-    int pts;
+    long long pts;
 }PacketInfo;
 typedef  QVector<PacketInfo> VPacketInfo;
 

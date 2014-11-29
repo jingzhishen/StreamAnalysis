@@ -23,8 +23,8 @@ UnPackAudioInfo UnpackThread::getUnpackAudioInfo(VPacketInfo &vPacketInfo, int s
 {
 	UnPackAudioInfo info;
 
-	if(vPacketInfo.size() == 0)return info;
 	memset(&info, 0, sizeof(UnPackAudioInfo));
+	if(vPacketInfo.size() == 0)return info;
 	info.nFrameCount = vPacketInfo.size();
 	unsigned long long nTotalSize = 0;
 
@@ -54,11 +54,11 @@ UnPackVideoInfo UnpackThread::getUnpackVidioInfo(VPacketInfo &vPacketInfo, int s
 {
 	UnPackVideoInfo info;
 
+	memset(&info, 0, sizeof(UnPackVideoInfo));
 	if(vPacketInfo.size() == 0)return info;
 	QVector<int> vKeyFrame;
 	unsigned long long nTotalSize = 0;
 
-	memset(&info, 0, sizeof(UnPackVideoInfo));
 	info.nFrameCount = vPacketInfo.size();
 	info.ptsContinue.nFlag = 1;
 	info.nStreamIndex = stream_index;
@@ -121,8 +121,10 @@ UnPackInfo UnpackThread::getUnpackInfo(QMap<int, VPacketInfo> &mPackets, const A
 			unpackinfo.videoInfo = getUnpackVidioInfo(vPacketInfo, iter.key(), ic->streams[iter.key()]->time_base);
 		}
 		if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
-			unpackinfo.audioInfo[unpackinfo.nAudioCount] = getUnpackAudioInfo(vPacketInfo, iter.key());
-			unpackinfo.nAudioCount++;
+			if(unpackinfo.nAudioCount < MAX_AUDIO_STREAM){
+				unpackinfo.audioInfo[unpackinfo.nAudioCount] = getUnpackAudioInfo(vPacketInfo, iter.key());
+				unpackinfo.nAudioCount++;
+			}
 		}
 	}
 
@@ -143,6 +145,7 @@ void UnpackThread::run()
 {
 	AVFormatContext *ic = NULL;
 	AVPacket pkt;
+	int wanted_stream[AVMEDIA_TYPE_NB];
 	QMap<int, VPacketInfo> mPackets;
 	int err, ret = 0;
 	int64_t filesize = 0, pos_max = 0;
@@ -153,6 +156,7 @@ void UnpackThread::run()
 	QSqlQuery query(db);
 
 	av_init_packet(&pkt);
+	memset(wanted_stream, -1, sizeof(wanted_stream));
 	filesize = getFileSize(m_pWindow->m_fileName);
 	m_pWindow->setUnpackStatusWithLock(UNPACK_RUN);
 	emit update_status(UNPACK_RUN);
@@ -172,11 +176,21 @@ void UnpackThread::run()
 	}
 	av_dump_format(ic, 0, m_pWindow->m_fileName.toStdString().data(), 0);
 
-	for(unsigned int i = 0; i < ic->nb_streams; i++){
-		if(ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO \
-				|| ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
-			mPackets[i] = QVector<PacketInfo>();
+	if(ic->nb_programs <= 1){
+		for(unsigned int i = 0; i < ic->nb_streams; i++){
+			if(ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO \
+					|| ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
+				mPackets[i] = QVector<PacketInfo>();
+			}
 		}
+	}else{
+		int video_index = av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO, wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
+		int audio_index = av_find_best_stream(ic, AVMEDIA_TYPE_AUDIO, wanted_stream[AVMEDIA_TYPE_AUDIO], video_index, NULL, 0);
+
+		if(video_index >= 0)
+			mPackets[video_index] = QVector<PacketInfo>();
+		if(audio_index >= 0)
+			mPackets[audio_index] = QVector<PacketInfo>();
 	}
 
 	db.transaction();
@@ -207,12 +221,13 @@ void UnpackThread::run()
 			if(pkt.dts == AV_NOPTS_VALUE)
 				pkt.dts = -1;
 			if(pkt.pts == AV_NOPTS_VALUE)
-				pkt.pts = pkt.dts;
+				pkt.pts = -1;
+			int64_t pts_tmp = pkt.pts == -1 ? pkt.dts : pkt.pts;
 			QMap<int, VPacketInfo>::iterator iter = mPackets.find(pkt.stream_index);
 			if(iter != mPackets.end()){
 				PacketInfo info;
 				info.flags = pkt.flags;
-				info.pts = pkt.pts;
+				info.pts = pts_tmp;
 				info.size = pkt.size;
 				info.stream = pkt.stream_index;
 				mPackets[pkt.stream_index].append(info);
@@ -220,7 +235,7 @@ void UnpackThread::run()
 
 			AVRational time_base = ic->streams[pkt.stream_index]->time_base;
 			double pts_sec;
-			pts_sec = pkt.pts != -1 ? ((double)pkt.pts * 1.0 * time_base.num / time_base.den) : -1;
+			pts_sec = pts_tmp != -1 ? ((double)pts_tmp * 1.0 * time_base.num / time_base.den) : -1;
 
 			if(filesize > 0 && pkt.pos > 0){
 				pos_max = qMax(pkt.pos, pos_max);
@@ -233,8 +248,8 @@ void UnpackThread::run()
 			}
 			int start_size = pkt.size > DATA_START_SIZE ? DATA_START_SIZE : pkt.size;
 			int end_size = pkt.size > DATA_END_SIZE ? DATA_START_SIZE : pkt.size;
-			QByteArray data_start = QByteArray((const char *)pkt.data,start_size);
-			QByteArray data_end = QByteArray((const char *)(pkt.data + (pkt.size - end_size)),start_size);
+			QByteArray data_start = QByteArray((const char *)pkt.data, start_size);
+			QByteArray data_end = QByteArray((const char *)(pkt.data + (pkt.size - end_size)), start_size);
 
 			query.prepare("insert into avindex values (NULL, :stream_index, :flags, :pos, :size, :pts, :dts, :data_start, :data_end, :pts_sec);");
 			query.bindValue(":stream_index", pkt.stream_index);
@@ -265,11 +280,12 @@ void UnpackThread::run()
 	}
 
 	av_free_packet(&pkt);
-	avformat_close_input(&ic);
+	if(ic)
+		avformat_close_input(&ic);
 	return;
 ERR:
 	av_free_packet(&pkt);
 	db.close();
-	avformat_close_input(&ic);
-	//    exec();
+	if(ic)
+		avformat_close_input(&ic);
 }

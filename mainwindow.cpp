@@ -234,6 +234,7 @@ void MainWindow::slot_set_unpack_info(UnPackInfo info)
 	}
 	while(nAudioCount < info.nAudioCount){
 		if(info.audioInfo[nAudioCount].nFrameCount > 0){
+			result.append("\n");
             result.append("audio index=> ").append(QString::number(info.audioInfo[nAudioCount].nStreamIndex)).append(":\n");
 			result.append("packet=> ");
 			result.append("max: ").append(QString::number(info.audioInfo[nAudioCount].nMaxPacketSize)).append(" ");
@@ -246,9 +247,8 @@ void MainWindow::slot_set_unpack_info(UnPackInfo info)
 
             result.append("\nnframe:").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
 			result.append("\n");
-
-			nAudioCount++;
 		}
+		nAudioCount++;
 	}
 
 	ui->txt_unpackinfo->setText(result);
