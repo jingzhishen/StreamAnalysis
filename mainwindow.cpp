@@ -265,7 +265,7 @@ void MainWindow::on_btn_openfile_clicked()
 	unlock();
 
 	static QString dir = ".";
-	QString s_filefilter = tr("Media Files(*.flv *.mp4 *.mov *.avi *.mpg *.mpeg  *.mkv *.ts *.m2ts *.3gp *.vob *.dat *.asf *.mpeg *.mp3 *.aac *.m4a *.ac3 )");
+	QString s_filefilter = tr("Media Files(*.flv *.mp4 *.mov *.avi *.mpg *.mpeg  *.mkv *.ts *.m2ts *.3gp *.vob *.dat *.asf *.mpeg *.mp3 *.aac *.m4a *.ac3 *.wav )");
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open Media"), dir, s_filefilter);
 	if(!fileName.isEmpty()){
 		if(fileName.count('/') > 0)
