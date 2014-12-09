@@ -35,7 +35,7 @@
        <rect>
         <x>0</x>
         <y>90</y>
-        <width>581</width>
+        <width>654</width>
         <height>341</height>
        </rect>
       </property>
@@ -133,9 +133,9 @@
      <widget class="QTextEdit" name="txt_unpackinfo">
       <property name="geometry">
        <rect>
-        <x>585</x>
+        <x>656</x>
         <y>90</y>
-        <width>386</width>
+        <width>311</width>
         <height>341</height>
        </rect>
       </property>

@@ -73,7 +73,7 @@ void MainWindow::createDB()
 	db.open();
 
 	QSqlQuery query(db);
-	b_success = query.exec("create table avindex (id integer primary key autoincrement, stream_index int, flags int, pos int, size int, pts int, dts int, data_start blob, data_end blob, pts_sec double )");	//创建一个表
+    b_success = query.exec("create table avindex (id integer primary key autoincrement, stream_index int, flags int, pos int, size int, pts int, dts int, duration  int, data_start blob, data_end blob, dur_sec double, pts_sec double )");	//创建一个表
 	if(!b_success)
 		goto error;
 
@@ -139,7 +139,7 @@ void MainWindow::bindTableView(const QString &sql)
 
 	model->setQuery(sql, db);
 	//model->removeColumn(0); // don't show the ID
-
+//"select id,stream_index,flags,pos,size,pts,dts,duration,dur_sec,pts_sec from avindex ";
 	model->setHeaderData(0,Qt::Horizontal,QObject::tr("id"));
 	model->setHeaderData(1,Qt::Horizontal,QObject::tr("index"));
 	model->setHeaderData(2,Qt::Horizontal,QObject::tr("flags"));
@@ -147,15 +147,20 @@ void MainWindow::bindTableView(const QString &sql)
 	model->setHeaderData(4,Qt::Horizontal,QObject::tr("size"));
 	model->setHeaderData(5,Qt::Horizontal,QObject::tr("pts"));
 	model->setHeaderData(6,Qt::Horizontal,QObject::tr("dts"));
-	model->setHeaderData(7,Qt::Horizontal,QObject::tr("pts_sec"));
+    model->setHeaderData(7,Qt::Horizontal,QObject::tr("duration"));
+    model->setHeaderData(8,Qt::Horizontal,QObject::tr("dur_sec"));
+    model->setHeaderData(9,Qt::Horizontal,QObject::tr("pts_sec"));
 
 	ui->tvw_unpack->setModel(model);
 	ui->tvw_unpack->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
-	ui->tvw_unpack->setColumnWidth(1,50);
+    ui->tvw_unpack->setColumnWidth(1,40);
 	ui->tvw_unpack->setColumnWidth(2,40);
+    ui->tvw_unpack->setColumnWidth(3,60);
 	ui->tvw_unpack->setColumnWidth(4,70);
-	ui->tvw_unpack->setColumnWidth(6,80);
-	ui->tvw_unpack->setColumnWidth(7,80);
+    ui->tvw_unpack->setColumnWidth(6,80);
+    ui->tvw_unpack->setColumnWidth(7,65);
+    ui->tvw_unpack->setColumnWidth(8,65);
+    ui->tvw_unpack->setColumnWidth(9,80);
 	ui->tvw_unpack->setColumnHidden(0,true);
 	//ui->tvw_unpack->resizeColumnsToContents();
 
@@ -214,38 +219,38 @@ void MainWindow::slot_set_unpack_info(UnPackInfo info)
 	int nAudioCount = 0;
 
 	if(info.videoInfo.nFrameCount > 0){
-        result.append("video index=> ").append(QString::number(info.videoInfo.nStreamIndex)).append(":\n");
-		result.append("packet=> ");
-		result.append("max: ").append(QString::number(info.videoInfo.nMaxPacketSize)).append(" ");;
-		result.append("min: ").append(QString::number(info.videoInfo.nMinPacketSize)).append(" ");
-		result.append("ave: ").append(QString::number(info.videoInfo.nAvePacketSize)).append(" ");
-		result.append("\ninterval=> ");
-		result.append("max: ").append(QString::number(info.videoInfo.dMaxInterval)).append(" ");
-		result.append("min: ").append(QString::number(info.videoInfo.dMinInterval)).append(" ");
-		result.append("ave: ").append(QString::number(info.videoInfo.dAveInterval)).append(" ");
+        result.append("video ").append(QString::number(info.videoInfo.nStreamIndex)).append(":\n");
+        result.append("packet info: \n");
+        result.append("max=").append(QString::number(info.videoInfo.nMaxPacketSize)).append(",");;
+        result.append("min=").append(QString::number(info.videoInfo.nMinPacketSize)).append(",");
+        result.append("ave=").append(QString::number(info.videoInfo.nAvePacketSize)).append("");
+        result.append("\ninterval info: \n");
+        result.append("max=").append(QString::number(info.videoInfo.dMaxInterval)).append(",");
+        result.append("min=").append(QString::number(info.videoInfo.dMinInterval)).append(",");
+        result.append("ave=").append(QString::number(info.videoInfo.dAveInterval)).append("");
 
-        result.append("\ncontinue=> ").append(QString::number(info.videoInfo.ptsContinue.nFlag)).append(" ");
+        result.append("\ncontinue = ").append(QString::number(info.videoInfo.ptsContinue.nFlag)).append(" ");
         if(!info.videoInfo.ptsContinue.nFlag)
-            result.append("pts: ").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
+            result.append("pts=").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
 
-        result.append("\nnframe: ").append(QString::number(info.videoInfo.nFrameCount)).append(" ");
-        result.append("nkeyframe: ").append(QString::number(info.videoInfo.nKeyFrameCount)).append(" ");
+        result.append("\nnframe=").append(QString::number(info.videoInfo.nFrameCount)).append(" ");
+        result.append("nkeyframe=").append(QString::number(info.videoInfo.nKeyFrameCount)).append(" ");
 		result.append("\n");
 	}
 	while(nAudioCount < info.nAudioCount){
 		if(info.audioInfo[nAudioCount].nFrameCount > 0){
 			result.append("\n");
-            result.append("audio index=> ").append(QString::number(info.audioInfo[nAudioCount].nStreamIndex)).append(":\n");
-			result.append("packet=> ");
-			result.append("max: ").append(QString::number(info.audioInfo[nAudioCount].nMaxPacketSize)).append(" ");
-			result.append("min: ").append(QString::number(info.audioInfo[nAudioCount].nMinPacketSize)).append(" ");
-			result.append("ave: ").append(QString::number(info.audioInfo[nAudioCount].nAvePacketSize)).append(" ");
+            result.append("audio ").append(QString::number(info.audioInfo[nAudioCount].nStreamIndex)).append(":\n");
+            result.append("packet info: \n");
+            result.append("max=").append(QString::number(info.audioInfo[nAudioCount].nMaxPacketSize)).append(",");
+            result.append("min=").append(QString::number(info.audioInfo[nAudioCount].nMinPacketSize)).append(",");
+            result.append("ave=").append(QString::number(info.audioInfo[nAudioCount].nAvePacketSize)).append("");
 
-            result.append("\ncontinue=> ").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.nFlag)).append(" ");
+            result.append("\ncontinue = ").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.nFlag)).append(" ");
             if(!info.audioInfo[nAudioCount].ptsContinue.nFlag)
-                result.append("pts: ").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
+                result.append("pts=").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
 
-            result.append("\nnframe:").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
+            result.append("\nnframe=").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
 			result.append("\n");
 		}
 		nAudioCount++;
@@ -265,7 +270,7 @@ void MainWindow::on_btn_openfile_clicked()
 	unlock();
 
 	static QString dir = ".";
-	QString s_filefilter = tr("Media Files(*.flv *.mp4 *.mov *.avi *.mpg *.mpeg  *.mkv *.ts *.m2ts *.3gp *.vob *.dat *.asf *.mpeg *.mp3 *.aac *.m4a *.ac3 *.wav )");
+	QString s_filefilter = tr("Media Files(*.flv *.rm *.rmvb *.real *.mp4 *.mov *.avi *.mpg *.mpeg  *.mkv *.ts *.m2ts *.3gp *.vob *.dat *.asf  *.mp3 *.aac *.m4a *.ac3 *.wav )");
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open Media"), dir, s_filefilter);
 	if(!fileName.isEmpty()){
 		if(fileName.count('/') > 0)
@@ -372,7 +377,10 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 		for(int i = 0; i < data_start.length(); i++){
 			char tmp[3];
             snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_start.data())[i]));
-			result.append(tmp).append(" ");
+            if(i+1 == 16)
+                result.append(tmp).append("  ");
+            else
+                result.append(tmp).append(" ");
 		}
 		result.append("\n");
 
@@ -380,7 +388,10 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 		for(int i = 0; i < data_end.length(); i++){
 			char tmp[3];
             snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_end.data())[i]));
-			result.append(tmp).append(" ");
+            if(i+1 == 16)
+                result.append(tmp).append("  ");
+            else
+                result.append(tmp).append(" ");
 		}
 
 		ui->txt_pkt_data->setText(result);

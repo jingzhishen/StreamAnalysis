@@ -27,7 +27,7 @@ const int DATA_END_SIZE = 16;//the last datasize
 const int PROGRESS_RANGE = 1000;
 //const QString DB_FILENAME = ":memory:";
 const QString DB_FILENAME = "avindex.db";
-const QString SQL_SELECT = "select id,stream_index,flags,pos,size,pts,dts,pts_sec from avindex ";
+const QString SQL_SELECT = "select id,stream_index,flags,pos,size,pts,dts,duration,dur_sec,pts_sec from avindex ";
 class UnpackThread;
 
 

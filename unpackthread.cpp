@@ -234,8 +234,9 @@ void UnpackThread::run()
 			}
 
 			AVRational time_base = ic->streams[pkt.stream_index]->time_base;
-			double pts_sec;
+            double pts_sec, dur_sec;
 			pts_sec = pts_tmp != -1 ? ((double)pts_tmp * 1.0 * time_base.num / time_base.den) : -1;
+            dur_sec = pkt.duration != -1 ? ((double)pkt.duration * 1.0 * time_base.num / time_base.den) : -1;
 
 			if(filesize > 0 && pkt.pos > 0){
 				pos_max = qMax(pkt.pos, pos_max);
@@ -251,16 +252,19 @@ void UnpackThread::run()
 			QByteArray data_start = QByteArray((const char *)pkt.data, start_size);
 			QByteArray data_end = QByteArray((const char *)(pkt.data + (pkt.size - end_size)), start_size);
 
-			query.prepare("insert into avindex values (NULL, :stream_index, :flags, :pos, :size, :pts, :dts, :data_start, :data_end, :pts_sec);");
+            query.prepare("insert into avindex values (NULL, :stream_index, :flags, :pos, :size, :pts, :dts, :duration, :data_start, :data_end, :dur_sec, :pts_sec);");
 			query.bindValue(":stream_index", pkt.stream_index);
 			query.bindValue(":flags", pkt.flags);
 			query.bindValue(":pos", pkt.pos);
 			query.bindValue(":size", pkt.size);
 			query.bindValue(":pts", pkt.pts);
 			query.bindValue(":dts", pkt.dts);
+            query.bindValue(":duration", pkt.duration);
 			query.bindValue(":data_start", data_start);
 			query.bindValue(":data_end", data_end);
+            query.bindValue(":dur_sec", dur_sec);
 			query.bindValue(":pts_sec", pts_sec);
+
 			query.exec();
 
 			av_free_packet(&pkt);
