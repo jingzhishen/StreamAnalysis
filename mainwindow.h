@@ -63,6 +63,8 @@ private slots:
 
     void on_btn_execsql_clicked();
 
+    void on_btn_execsql_2_clicked();
+
 private:
 	Ui::MainWindow *ui;
 

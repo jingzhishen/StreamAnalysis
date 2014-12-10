@@ -443,3 +443,36 @@ void MainWindow::on_btn_execsql_clicked()
     }
     unlock();
 }
+
+void MainWindow::on_btn_execsql_2_clicked()
+{
+    QString sql = ui->txt_select->text().trimmed();
+    if(sql.length() < 5)
+        return;
+    lock();
+    if(getUnpackStatus() &	(UNPACK_FINISH | UNPACK_STOP)){
+        QString result;
+        db.open();
+        QSqlQuery query(db);
+        query.exec(sql);
+        if(true == query.first()){
+            int col_num = query.record().count();
+            for(int col = 0; col < col_num; col++){
+                result.append(query.value(col).toByteArray().data());
+                if(col + 1 != col_num)
+                    result.append(" , ");
+            }
+
+            ui->txt_selectout->setText(result);
+        }else{
+            QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("sql error!!	"));
+        }
+
+        db.close();
+    }else{
+        unlock();
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+        return;
+    }
+    unlock();
+}
