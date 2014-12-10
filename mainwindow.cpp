@@ -377,8 +377,8 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 		for(int i = 0; i < data_start.length(); i++){
 			char tmp[3];
             snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_start.data())[i]));
-            if(i+1 == 16)
-                result.append(tmp).append("  ");
+            if((i+1) % 8 == 0)
+                result.append(tmp).append("   ");
             else
                 result.append(tmp).append(" ");
 		}
@@ -388,8 +388,8 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 		for(int i = 0; i < data_end.length(); i++){
 			char tmp[3];
             snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_end.data())[i]));
-            if(i+1 == 16)
-                result.append(tmp).append("  ");
+            if((i+1) % 8 == 0)
+                result.append(tmp).append("   ");
             else
                 result.append(tmp).append(" ");
 		}

@@ -30,6 +30,10 @@ UnPackAudioInfo UnpackThread::getUnpackAudioInfo(VPacketInfo &vPacketInfo, int s
 
 	info.ptsContinue.nFlag = 1;
 	info.nStreamIndex = stream_index;
+    if(vPacketInfo.size()){
+        info.nMaxPacketSize = vPacketInfo[0].size;
+        info.nMinPacketSize = vPacketInfo[0].size;
+    }
 	for(int i = 0; i < vPacketInfo.size(); i++){
 		nTotalSize += vPacketInfo[i].size;
 		info.nMaxPacketSize = qMax(info.nMaxPacketSize, vPacketInfo[i].size);
@@ -45,7 +49,7 @@ UnPackAudioInfo UnpackThread::getUnpackAudioInfo(VPacketInfo &vPacketInfo, int s
 	return info;
 }
 
-bool PtsSort(const int first_pts, const int second_pts)
+bool PtsSort(const int64_t first_pts, const int64_t second_pts)
 {
 	return (first_pts < second_pts);
 }
@@ -56,13 +60,17 @@ UnPackVideoInfo UnpackThread::getUnpackVidioInfo(VPacketInfo &vPacketInfo, int s
 
 	memset(&info, 0, sizeof(UnPackVideoInfo));
 	if(vPacketInfo.size() == 0)return info;
-	QVector<int> vKeyFrame;
+    QVector<int64_t> vKeyFrame;
 	unsigned long long nTotalSize = 0;
 
 	info.nFrameCount = vPacketInfo.size();
 	info.ptsContinue.nFlag = 1;
 	info.nStreamIndex = stream_index;
 
+    if(vPacketInfo.size()){
+        info.nMaxPacketSize = vPacketInfo[0].size;
+        info.nMinPacketSize = vPacketInfo[0].size;
+    }
 	for(int i = 0; i < vPacketInfo.size(); i++){
 		nTotalSize += vPacketInfo[i].size;
 		info.nMaxPacketSize = qMax(info.nMaxPacketSize, vPacketInfo[i].size);
@@ -83,26 +91,31 @@ UnPackVideoInfo UnpackThread::getUnpackVidioInfo(VPacketInfo &vPacketInfo, int s
 
 	qSort(vKeyFrame.begin(),vKeyFrame.end(),PtsSort);
 
-	QVector<int> vInterval;
-	for(int i = 0; i < vKeyFrame.size(); i++){
-		if(i != 0){
-			vInterval.append(vKeyFrame[i] - vKeyFrame[i-1]);
-		}
-	}
+    QVector<int64_t> vInterval;
+    if(vKeyFrame.size()){
+        for(int i = 1; i < vKeyFrame.size(); i++){
+                vInterval.append(vKeyFrame[i] - vKeyFrame[i-1]);
+        }
+    }
 
 	unsigned long long nTotalInterval = 0;
+	int64_t nMaxInterval = 0, nMinInterval = 0, nAveInterval = 0; 
+    if(vInterval.size()){
+        nMaxInterval = vInterval[0];
+        nMinInterval = vInterval[0];
+    }
 	for(int i = 0; i < vInterval.size(); i++){
 		nTotalInterval += vInterval[i];
-		info.dMaxInterval = qMax((int)info.dMaxInterval, vInterval[i]);
-		info.dMinInterval = qMin((int)info.dMinInterval, vInterval[i]);
+		nMaxInterval = qMax(nMaxInterval, vInterval[i]);
+		nMinInterval = qMin(nMinInterval, vInterval[i]);
 	}
 
 	if(vInterval.size() > 0)
-		info.dAveInterval = nTotalInterval / vInterval.size();
+		nAveInterval = nTotalInterval / vInterval.size();
 
-	info.dMaxInterval = (double)info.dMaxInterval * 1.0 * time_base.num / time_base.den;
-	info.dMinInterval = (double)info.dMinInterval * 1.0 * time_base.num / time_base.den;
-	info.dAveInterval = (double)info.dAveInterval * 1.0 * time_base.num / time_base.den;
+	info.dMaxInterval = nMaxInterval * 1.0 * time_base.num / time_base.den;
+	info.dMinInterval = nMinInterval * 1.0 * time_base.num / time_base.den;
+	info.dAveInterval = nAveInterval * 1.0 * time_base.num / time_base.den;
 
 	return info;
 }
@@ -234,17 +247,24 @@ void UnpackThread::run()
 			}
 
 			AVRational time_base = ic->streams[pkt.stream_index]->time_base;
-            double pts_sec, dur_sec;
+			double pts_sec, dur_sec;
 			pts_sec = pts_tmp != -1 ? ((double)pts_tmp * 1.0 * time_base.num / time_base.den) : -1;
-            dur_sec = pkt.duration != -1 ? ((double)pkt.duration * 1.0 * time_base.num / time_base.den) : -1;
+			dur_sec = pkt.duration != -1 ? ((double)pkt.duration * 1.0 * time_base.num / time_base.den) : -1;
 
-			if(filesize > 0 && pkt.pos > 0){
-				pos_max = qMax(pkt.pos, pos_max);
-				if(pos_max < filesize){
-					long long value = (PROGRESS_RANGE - 1) * pos_max / filesize;
+			if(0 == strcmp(ic->iformat->name, "mov,mp4,m4a,3gp,3g2,mj2")){
+				if(pts_sec > 0 && ic->duration > 0){
+					long long value = PROGRESS_RANGE * pts_sec * 1000 * 1000 / ic->duration;
 					emit update_progressbar((int)value);
-				}else{
-					qDebug() << "pos_max = " << pos_max << ",filesize = " << filesize <<endl;
+				}
+			}else{
+				if(filesize > 0 && pkt.pos > 0){
+					pos_max = qMax(pkt.pos, pos_max);
+					if(pos_max < filesize){
+						long long value = (PROGRESS_RANGE - 1) * pos_max / filesize;
+						emit update_progressbar((int)value);
+					}else{
+						qDebug() << "pos_max = " << pos_max << ",filesize = " << filesize <<endl;
+					}
 				}
 			}
 			int start_size = pkt.size > DATA_START_SIZE ? DATA_START_SIZE : pkt.size;
@@ -252,17 +272,17 @@ void UnpackThread::run()
 			QByteArray data_start = QByteArray((const char *)pkt.data, start_size);
 			QByteArray data_end = QByteArray((const char *)(pkt.data + (pkt.size - end_size)), start_size);
 
-            query.prepare("insert into avindex values (NULL, :stream_index, :flags, :pos, :size, :pts, :dts, :duration, :data_start, :data_end, :dur_sec, :pts_sec);");
+			query.prepare("insert into avindex values (NULL, :stream_index, :flags, :pos, :size, :pts, :dts, :duration, :data_start, :data_end, :dur_sec, :pts_sec);");
 			query.bindValue(":stream_index", pkt.stream_index);
 			query.bindValue(":flags", pkt.flags);
 			query.bindValue(":pos", pkt.pos);
 			query.bindValue(":size", pkt.size);
 			query.bindValue(":pts", pkt.pts);
 			query.bindValue(":dts", pkt.dts);
-            query.bindValue(":duration", pkt.duration);
+			query.bindValue(":duration", pkt.duration);
 			query.bindValue(":data_start", data_start);
 			query.bindValue(":data_end", data_end);
-            query.bindValue(":dur_sec", dur_sec);
+			query.bindValue(":dur_sec", dur_sec);
 			query.bindValue(":pts_sec", pts_sec);
 
 			query.exec();
