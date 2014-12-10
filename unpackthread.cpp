@@ -131,14 +131,26 @@ UnPackInfo UnpackThread::getUnpackInfo(QMap<int, VPacketInfo> &mPackets, const A
 	{
 		VPacketInfo &vPacketInfo = iter.value();
 		if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_VIDEO){
-			unpackinfo.videoInfo = getUnpackVidioInfo(vPacketInfo, iter.key(), ic->streams[iter.key()]->time_base);
+            if(unpackinfo.nVideoCount < MAX_VIDEO_STREAM){
+                unpackinfo.videoInfo[unpackinfo.nVideoCount] = getUnpackVidioInfo(vPacketInfo, iter.key(), ic->streams[iter.key()]->time_base);
+                unpackinfo.nVideoCount++;
+            }
+            continue;
 		}
 		if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
 			if(unpackinfo.nAudioCount < MAX_AUDIO_STREAM){
 				unpackinfo.audioInfo[unpackinfo.nAudioCount] = getUnpackAudioInfo(vPacketInfo, iter.key());
 				unpackinfo.nAudioCount++;
 			}
+            continue;
 		}
+        if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE){
+            if(unpackinfo.nSubCount < MAX_SUB_STREAM){
+                unpackinfo.subInfo[unpackinfo.nSubCount] = getUnpackAudioInfo(vPacketInfo, iter.key());
+                unpackinfo.nSubCount++;
+            }
+            continue;
+        }
 	}
 
 	return unpackinfo;
@@ -191,10 +203,7 @@ void UnpackThread::run()
 
 	if(ic->nb_programs <= 1){
 		for(unsigned int i = 0; i < ic->nb_streams; i++){
-			if(ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO \
-					|| ic->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
-				mPackets[i] = QVector<PacketInfo>();
-			}
+            mPackets[i] = QVector<PacketInfo>();
 		}
 	}else{
 		int video_index = av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO, wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
@@ -244,7 +253,7 @@ void UnpackThread::run()
 				info.size = pkt.size;
 				info.stream = pkt.stream_index;
 				mPackets[pkt.stream_index].append(info);
-			}
+            }
 
 			AVRational time_base = ic->streams[pkt.stream_index]->time_base;
 			double pts_sec, dur_sec;

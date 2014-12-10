@@ -216,27 +216,30 @@ void MainWindow::slot_bind_combox(int nb_streams)
 void MainWindow::slot_set_unpack_info(UnPackInfo info)
 {
 	QString result;
-	int nAudioCount = 0;
+    int nVideoCount = 0, nAudioCount = 0, nSubCount = 0;
 
-	if(info.videoInfo.nFrameCount > 0){
-        result.append("video ").append(QString::number(info.videoInfo.nStreamIndex)).append(":\n");
-        result.append("packet info: \n");
-        result.append("max=").append(QString::number(info.videoInfo.nMaxPacketSize)).append(",");;
-        result.append("min=").append(QString::number(info.videoInfo.nMinPacketSize)).append(",");
-        result.append("ave=").append(QString::number(info.videoInfo.nAvePacketSize)).append("");
-        result.append("\ninterval info: \n");
-        result.append("max=").append(QString::number(info.videoInfo.dMaxInterval)).append(",");
-        result.append("min=").append(QString::number(info.videoInfo.dMinInterval)).append(",");
-        result.append("ave=").append(QString::number(info.videoInfo.dAveInterval)).append("");
+    while(nVideoCount < info.nVideoCount){
+        if(info.videoInfo[nVideoCount].nFrameCount > 0){
+            result.append("video ").append(QString::number(info.videoInfo[nVideoCount].nStreamIndex)).append(":\n");
+            result.append("packet info: \n");
+            result.append("max=").append(QString::number(info.videoInfo[nVideoCount].nMaxPacketSize)).append(",");;
+            result.append("min=").append(QString::number(info.videoInfo[nVideoCount].nMinPacketSize)).append(",");
+            result.append("ave=").append(QString::number(info.videoInfo[nVideoCount].nAvePacketSize)).append("");
+            result.append("\ninterval info: \n");
+            result.append("max=").append(QString::number(info.videoInfo[nVideoCount].dMaxInterval)).append(",");
+            result.append("min=").append(QString::number(info.videoInfo[nVideoCount].dMinInterval)).append(",");
+            result.append("ave=").append(QString::number(info.videoInfo[nVideoCount].dAveInterval)).append("");
 
-        result.append("\ncontinue = ").append(QString::number(info.videoInfo.ptsContinue.nFlag)).append(" ");
-        if(!info.videoInfo.ptsContinue.nFlag)
-            result.append("pts=").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
+            result.append("\ncontinue = ").append(QString::number(info.videoInfo[nVideoCount].ptsContinue.nFlag)).append(" ");
+            if(!info.videoInfo[nVideoCount].ptsContinue.nFlag)
+                result.append("pts=").append(QString::number(info.videoInfo[nVideoCount].ptsContinue.pts)).append(" ");
 
-        result.append("\nnframe=").append(QString::number(info.videoInfo.nFrameCount)).append(" ");
-        result.append("nkeyframe=").append(QString::number(info.videoInfo.nKeyFrameCount)).append(" ");
-		result.append("\n");
-	}
+            result.append("\nnframe=").append(QString::number(info.videoInfo[nVideoCount].nFrameCount)).append(" ");
+            result.append("nkeyframe=").append(QString::number(info.videoInfo[nVideoCount].nKeyFrameCount)).append(" ");
+            result.append("\n");
+        }
+        nVideoCount++;
+    }
 	while(nAudioCount < info.nAudioCount){
 		if(info.audioInfo[nAudioCount].nFrameCount > 0){
 			result.append("\n");
@@ -248,13 +251,31 @@ void MainWindow::slot_set_unpack_info(UnPackInfo info)
 
             result.append("\ncontinue = ").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.nFlag)).append(" ");
             if(!info.audioInfo[nAudioCount].ptsContinue.nFlag)
-                result.append("pts=").append(QString::number(info.videoInfo.ptsContinue.pts)).append(" ");
+                result.append("pts=").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.pts)).append(" ");
 
             result.append("\nnframe=").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
 			result.append("\n");
 		}
 		nAudioCount++;
 	}
+    while(nSubCount < info.nSubCount){
+        if(info.subInfo[nSubCount].nFrameCount > 0){
+            result.append("\n");
+            result.append("sub ").append(QString::number(info.subInfo[nSubCount].nStreamIndex)).append(":\n");
+            result.append("packet info: \n");
+            result.append("max=").append(QString::number(info.subInfo[nSubCount].nMaxPacketSize)).append(",");
+            result.append("min=").append(QString::number(info.subInfo[nSubCount].nMinPacketSize)).append(",");
+            result.append("ave=").append(QString::number(info.subInfo[nSubCount].nAvePacketSize)).append("");
+
+            result.append("\ncontinue = ").append(QString::number(info.subInfo[nSubCount].ptsContinue.nFlag)).append(" ");
+            if(!info.subInfo[nSubCount].ptsContinue.nFlag)
+                result.append("pts=").append(QString::number(info.subInfo[nSubCount].ptsContinue.pts)).append(" ");
+
+            result.append("\nnframe=").append(QString::number(info.subInfo[nSubCount].nFrameCount));
+            result.append("\n");
+        }
+        nSubCount++;
+    }
 
 	ui->txt_unpackinfo->setText(result);
 }

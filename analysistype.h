@@ -2,7 +2,9 @@
 #define ANALYSISTYPE_H
 
 #include <QMetaType>
-const int MAX_AUDIO_STREAM = 100;
+const int MAX_AUDIO_STREAM = 50;
+const int MAX_VIDEO_STREAM = 50;
+const int MAX_SUB_STREAM = 50;
 
 typedef struct{
     int nFlag;//pts是否连续,1:连续(默认)，0：不连续
@@ -38,10 +40,15 @@ typedef struct{
     PtsContinue ptsContinue;
 }UnPackAudioInfo;
 
+typedef UnPackAudioInfo UnPackSubInfo;
+
 typedef struct{
+    int nVideoCount;
     int nAudioCount;
-    UnPackVideoInfo videoInfo;
+    int nSubCount;
+    UnPackVideoInfo videoInfo[MAX_VIDEO_STREAM];
     UnPackAudioInfo audioInfo[MAX_AUDIO_STREAM];
+    UnPackSubInfo subInfo[MAX_SUB_STREAM];
 }UnPackInfo;
 
 typedef struct{
