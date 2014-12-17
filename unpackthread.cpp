@@ -30,10 +30,10 @@ UnPackAudioInfo UnpackThread::getUnpackAudioInfo(VPacketInfo &vPacketInfo, int s
 
 	info.ptsContinue.nFlag = 1;
 	info.nStreamIndex = stream_index;
-    if(vPacketInfo.size()){
-        info.nMaxPacketSize = vPacketInfo[0].size;
-        info.nMinPacketSize = vPacketInfo[0].size;
-    }
+	if(vPacketInfo.size()){
+		info.nMaxPacketSize = vPacketInfo[0].size;
+		info.nMinPacketSize = vPacketInfo[0].size;
+	}
 	for(int i = 0; i < vPacketInfo.size(); i++){
 		nTotalSize += vPacketInfo[i].size;
 		info.nMaxPacketSize = qMax(info.nMaxPacketSize, vPacketInfo[i].size);
@@ -60,17 +60,17 @@ UnPackVideoInfo UnpackThread::getUnpackVidioInfo(VPacketInfo &vPacketInfo, int s
 
 	memset(&info, 0, sizeof(UnPackVideoInfo));
 	if(vPacketInfo.size() == 0)return info;
-    QVector<int64_t> vKeyFrame;
+	QVector<int64_t> vKeyFrame;
 	unsigned long long nTotalSize = 0;
 
 	info.nFrameCount = vPacketInfo.size();
 	info.ptsContinue.nFlag = 1;
 	info.nStreamIndex = stream_index;
 
-    if(vPacketInfo.size()){
-        info.nMaxPacketSize = vPacketInfo[0].size;
-        info.nMinPacketSize = vPacketInfo[0].size;
-    }
+	if(vPacketInfo.size()){
+		info.nMaxPacketSize = vPacketInfo[0].size;
+		info.nMinPacketSize = vPacketInfo[0].size;
+	}
 	for(int i = 0; i < vPacketInfo.size(); i++){
 		nTotalSize += vPacketInfo[i].size;
 		info.nMaxPacketSize = qMax(info.nMaxPacketSize, vPacketInfo[i].size);
@@ -91,19 +91,19 @@ UnPackVideoInfo UnpackThread::getUnpackVidioInfo(VPacketInfo &vPacketInfo, int s
 
 	qSort(vKeyFrame.begin(),vKeyFrame.end(),PtsSort);
 
-    QVector<int64_t> vInterval;
-    if(vKeyFrame.size()){
-        for(int i = 1; i < vKeyFrame.size(); i++){
-                vInterval.append(vKeyFrame[i] - vKeyFrame[i-1]);
-        }
-    }
+	QVector<int64_t> vInterval;
+	if(vKeyFrame.size()){
+		for(int i = 1; i < vKeyFrame.size(); i++){
+			vInterval.append(vKeyFrame[i] - vKeyFrame[i-1]);
+		}
+	}
 
 	unsigned long long nTotalInterval = 0;
 	int64_t nMaxInterval = 0, nMinInterval = 0, nAveInterval = 0; 
-    if(vInterval.size()){
-        nMaxInterval = vInterval[0];
-        nMinInterval = vInterval[0];
-    }
+	if(vInterval.size()){
+		nMaxInterval = vInterval[0];
+		nMinInterval = vInterval[0];
+	}
 	for(int i = 0; i < vInterval.size(); i++){
 		nTotalInterval += vInterval[i];
 		nMaxInterval = qMax(nMaxInterval, vInterval[i]);
@@ -131,26 +131,26 @@ UnPackInfo UnpackThread::getUnpackInfo(QMap<int, VPacketInfo> &mPackets, const A
 	{
 		VPacketInfo &vPacketInfo = iter.value();
 		if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_VIDEO){
-            if(unpackinfo.nVideoCount < MAX_VIDEO_STREAM){
-                unpackinfo.videoInfo[unpackinfo.nVideoCount] = getUnpackVidioInfo(vPacketInfo, iter.key(), ic->streams[iter.key()]->time_base);
-                unpackinfo.nVideoCount++;
-            }
-            continue;
+			if(unpackinfo.nVideoCount < MAX_VIDEO_STREAM){
+				unpackinfo.videoInfo[unpackinfo.nVideoCount] = getUnpackVidioInfo(vPacketInfo, iter.key(), ic->streams[iter.key()]->time_base);
+				unpackinfo.nVideoCount++;
+			}
+			continue;
 		}
 		if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_AUDIO){
 			if(unpackinfo.nAudioCount < MAX_AUDIO_STREAM){
 				unpackinfo.audioInfo[unpackinfo.nAudioCount] = getUnpackAudioInfo(vPacketInfo, iter.key());
 				unpackinfo.nAudioCount++;
 			}
-            continue;
+			continue;
 		}
-        if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE){
-            if(unpackinfo.nSubCount < MAX_SUB_STREAM){
-                unpackinfo.subInfo[unpackinfo.nSubCount] = getUnpackAudioInfo(vPacketInfo, iter.key());
-                unpackinfo.nSubCount++;
-            }
-            continue;
-        }
+		if(ic->streams[iter.key()]->codec->codec_type == AVMEDIA_TYPE_SUBTITLE){
+			if(unpackinfo.nSubCount < MAX_SUB_STREAM){
+				unpackinfo.subInfo[unpackinfo.nSubCount] = getUnpackAudioInfo(vPacketInfo, iter.key());
+				unpackinfo.nSubCount++;
+			}
+			continue;
+		}
 	}
 
 	return unpackinfo;
@@ -203,7 +203,7 @@ void UnpackThread::run()
 
 	if(ic->nb_programs <= 1){
 		for(unsigned int i = 0; i < ic->nb_streams; i++){
-            mPackets[i] = QVector<PacketInfo>();
+			mPackets[i] = QVector<PacketInfo>();
 		}
 	}else{
 		int video_index = av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO, wanted_stream[AVMEDIA_TYPE_VIDEO], -1, NULL, 0);
@@ -253,7 +253,7 @@ void UnpackThread::run()
 				info.size = pkt.size;
 				info.stream = pkt.stream_index;
 				mPackets[pkt.stream_index].append(info);
-            }
+			}
 
 			AVRational time_base = ic->streams[pkt.stream_index]->time_base;
 			double pts_sec, dur_sec;
@@ -284,10 +284,10 @@ void UnpackThread::run()
 			query.prepare("insert into avindex values (NULL, :stream_index, :flags, :pos, :size, :pts, :dts, :duration, :data_start, :data_end, :dur_sec, :pts_sec);");
 			query.bindValue(":stream_index", pkt.stream_index);
 			query.bindValue(":flags", pkt.flags);
-			query.bindValue(":pos", pkt.pos);
+			query.bindValue(":pos", QVariant(qlonglong(pkt.pos)));
 			query.bindValue(":size", pkt.size);
-			query.bindValue(":pts", pkt.pts);
-			query.bindValue(":dts", pkt.dts);
+			query.bindValue(":pts", QVariant(qlonglong(pkt.pts)));
+			query.bindValue(":dts", QVariant(qlonglong(pkt.dts)));
 			query.bindValue(":duration", pkt.duration);
 			query.bindValue(":data_start", data_start);
 			query.bindValue(":data_end", data_end);
