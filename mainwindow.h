@@ -10,6 +10,7 @@
 #include <QMainWindow>
 #include <QLabel>
 #include <QProgressBar>
+#include <QMenu>
 #include <QMessageBox>
 #include <QDebug>
 
@@ -29,12 +30,14 @@ const int PROGRESS_RANGE = 1000;
 const QString DB_FILENAME = "avindex.db";
 const QString SQL_SELECT = "select id,stream_index,flags,pos,size,pts,dts,duration,dur_sec,pts_sec from avindex ";
 class UnpackThread;
+class PacketDataSaveThread;
 
 
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
 		friend class UnpackThread;
+        friend class PacketDataSaveThread;
 
 public:
 	explicit MainWindow(QWidget *parent = 0);
@@ -58,12 +61,13 @@ private slots:
     void slot_update_progressbar(int value);
     void slot_update_status(UnpackStatus status);
     void on_btn_pause_clicked();
-
     void on_btn_stop_clicked();
-
     void on_btn_execsql_clicked();
-
     void on_btn_execsql_2_clicked();
+    void show_unpack_menu();
+    void row_sel_save();
+    void row_index_save();
+    void all_index_save();
 
 private:
 	Ui::MainWindow *ui;
@@ -71,11 +75,14 @@ private:
 	QLabel* m_lblStatus; //用于显示状态信息
 	QLabel* m_lblAuthor;
     QProgressBar *m_proBar;
+    QMenu *m_menu;
 
     UnpackThread *m_pUnpackThread;
     QTimer *m_timer;
 
 	QString m_fileName;
+    DataSaveType m_saveType;
+    QMap<int, int> m_saveSelect;
 	QWaitCondition m_waitCond;
 	QMutex m_mutex;
     UnpackStatus m_unpackStatus;

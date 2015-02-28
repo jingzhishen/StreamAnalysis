@@ -66,8 +66,16 @@ typedef enum{
     UNPACK_RUN   = 0x4,
     UNPACK_FINISH= 0x8,
     UNPACK_ERROR = 0x10,
-    UNPACK_STOP  = 0x20
+    UNPACK_STOP  = 0x20,
+    UNPACK_DATA_SAVING  = 0x40
 }UnpackStatus;
+
+typedef enum{
+    SAVE_NONE,
+    SAVE_ROW,
+    SAVE_ROW_INDEX,
+    SAVE_ALL_INDEX
+}DataSaveType;
 
 Q_DECLARE_METATYPE(UnpackStatus)
 Q_DECLARE_METATYPE(UnPackInfo)

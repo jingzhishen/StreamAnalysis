@@ -22,6 +22,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
 	m_timer = new QTimer(this);
 	//connect(m_timer,SIGNAL(timeout()),this,SLOT(slot_bind_tableview()));
+	ui->tvw_unpack->setContextMenuPolicy(Qt::CustomContextMenu);
+	connect(ui->tvw_unpack, SIGNAL(customContextMenuRequested(const QPoint&)),
+			this, SLOT(show_unpack_menu()));//this是datatable所在窗口
 }
 
 MainWindow::~MainWindow()
@@ -35,6 +38,74 @@ MainWindow::~MainWindow()
 	QFile::remove(DB_FILENAME);
 }
 
+void MainWindow::show_unpack_menu()
+{
+	m_menu = new QMenu(ui->tvw_unpack);
+
+	QAction *action1 = m_menu->addAction("保存选中行包数据");
+	QAction *action2 = m_menu->addAction("保存选中行对应索引包数据");
+	QAction *action3 = m_menu->addAction("保存全部索引包数据");
+
+	connect(action1, SIGNAL(triggered(bool)), this, SLOT(row_sel_save()));
+	connect(action2, SIGNAL(triggered(bool)), this, SLOT(row_index_save()));
+	connect(action3, SIGNAL(triggered(bool)), this, SLOT(all_index_save()));
+
+	m_menu->exec(QCursor::pos());//在当前鼠标位置显示
+	//    m_menu->exec(pos);//是在viewport显示
+}
+
+void MainWindow::row_sel_save()
+{
+	QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
+	if(indexes.count() == 0)
+	{
+		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
+		return;
+	}
+
+	lock();
+	if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+		unlock();
+		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+		return;
+	}
+	unlock();
+}
+
+void MainWindow::row_index_save()
+{
+	QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
+	if(indexes.count() == 0)
+	{
+		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
+		return;
+	}
+
+	lock();
+	if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+		unlock();
+		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+		return;
+	}
+	setUnpackStatus(UNPACK_DATA_SAVING);
+	unlock();
+
+    m_saveType = SAVE_ROW;
+    m_saveType = SAVE_ROW_INDEX;
+    m_saveType = SAVE_ALL_INDEX;
+}
+
+void MainWindow::all_index_save()
+{
+	lock();
+	if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+		unlock();
+		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+		return;
+	}
+	unlock();
+}
+
 void MainWindow::initStatusBar()
 {
 	QStatusBar* bar = ui->statusBar;
@@ -46,7 +117,7 @@ void MainWindow::initStatusBar()
 	m_lblStatus->setFrameShadow(QFrame::Sunken);
 	m_lblStatus->setText(QString::fromUtf8("欢迎使用码流分析器"));
 
-	m_lblAuthor->setText(tr("author: yingc	,mail: jingzhishen@126.com"));
+	m_lblAuthor->setText(tr("author: yingc   ,mail: jingzhishen@126.com"));
 	m_lblAuthor->setFrameStyle(QFrame::Box | QFrame::Sunken);
 	m_lblAuthor->setTextFormat(Qt::RichText);
 	m_lblAuthor->setOpenExternalLinks(true);
@@ -73,7 +144,7 @@ void MainWindow::createDB()
 	db.open();
 
 	QSqlQuery query(db);
-    b_success = query.exec("create table avindex (id integer primary key autoincrement, stream_index int, flags int, pos int, size int, pts int, dts int, duration  int, data_start blob, data_end blob, dur_sec double, pts_sec double )");	//创建一个表
+	b_success = query.exec("create table avindex (id integer primary key autoincrement, stream_index int, flags int, pos int, size int, pts int, dts int, duration  int, data_start blob, data_end blob, dur_sec double, pts_sec double )");	//创建一个表
 	if(!b_success)
 		goto error;
 
@@ -139,7 +210,7 @@ void MainWindow::bindTableView(const QString &sql)
 
 	model->setQuery(sql, db);
 	//model->removeColumn(0); // don't show the ID
-//"select id,stream_index,flags,pos,size,pts,dts,duration,dur_sec,pts_sec from avindex ";
+	//"select id,stream_index,flags,pos,size,pts,dts,duration,dur_sec,pts_sec from avindex ";
 	model->setHeaderData(0,Qt::Horizontal,QObject::tr("id"));
 	model->setHeaderData(1,Qt::Horizontal,QObject::tr("index"));
 	model->setHeaderData(2,Qt::Horizontal,QObject::tr("flags"));
@@ -147,20 +218,20 @@ void MainWindow::bindTableView(const QString &sql)
 	model->setHeaderData(4,Qt::Horizontal,QObject::tr("size"));
 	model->setHeaderData(5,Qt::Horizontal,QObject::tr("pts"));
 	model->setHeaderData(6,Qt::Horizontal,QObject::tr("dts"));
-    model->setHeaderData(7,Qt::Horizontal,QObject::tr("duration"));
-    model->setHeaderData(8,Qt::Horizontal,QObject::tr("dur_sec"));
-    model->setHeaderData(9,Qt::Horizontal,QObject::tr("pts_sec"));
+	model->setHeaderData(7,Qt::Horizontal,QObject::tr("duration"));
+	model->setHeaderData(8,Qt::Horizontal,QObject::tr("dur_sec"));
+	model->setHeaderData(9,Qt::Horizontal,QObject::tr("pts_sec"));
 
 	ui->tvw_unpack->setModel(model);
 	ui->tvw_unpack->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
-    ui->tvw_unpack->setColumnWidth(1,40);
+	ui->tvw_unpack->setColumnWidth(1,40);
 	ui->tvw_unpack->setColumnWidth(2,40);
-    ui->tvw_unpack->setColumnWidth(3,60);
+	ui->tvw_unpack->setColumnWidth(3,60);
 	ui->tvw_unpack->setColumnWidth(4,70);
-    ui->tvw_unpack->setColumnWidth(6,80);
-    ui->tvw_unpack->setColumnWidth(7,65);
-    ui->tvw_unpack->setColumnWidth(8,65);
-    ui->tvw_unpack->setColumnWidth(9,80);
+	ui->tvw_unpack->setColumnWidth(6,80);
+	ui->tvw_unpack->setColumnWidth(7,65);
+	ui->tvw_unpack->setColumnWidth(8,65);
+	ui->tvw_unpack->setColumnWidth(9,80);
 	ui->tvw_unpack->setColumnHidden(0,true);
 	//ui->tvw_unpack->resizeColumnsToContents();
 
@@ -216,66 +287,66 @@ void MainWindow::slot_bind_combox(int nb_streams)
 void MainWindow::slot_set_unpack_info(UnPackInfo info)
 {
 	QString result;
-    int nVideoCount = 0, nAudioCount = 0, nSubCount = 0;
+	int nVideoCount = 0, nAudioCount = 0, nSubCount = 0;
 
-    while(nVideoCount < info.nVideoCount){
-        if(info.videoInfo[nVideoCount].nFrameCount > 0){
-            result.append("video ").append(QString::number(info.videoInfo[nVideoCount].nStreamIndex)).append(":\n");
-            result.append("packet info: \n");
-            result.append("max=").append(QString::number(info.videoInfo[nVideoCount].nMaxPacketSize)).append(",");;
-            result.append("min=").append(QString::number(info.videoInfo[nVideoCount].nMinPacketSize)).append(",");
-            result.append("ave=").append(QString::number(info.videoInfo[nVideoCount].nAvePacketSize)).append("");
-            result.append("\ninterval info: \n");
-            result.append("max=").append(QString::number(info.videoInfo[nVideoCount].dMaxInterval)).append(",");
-            result.append("min=").append(QString::number(info.videoInfo[nVideoCount].dMinInterval)).append(",");
-            result.append("ave=").append(QString::number(info.videoInfo[nVideoCount].dAveInterval)).append("");
+	while(nVideoCount < info.nVideoCount){
+		if(info.videoInfo[nVideoCount].nFrameCount > 0){
+			result.append("video ").append(QString::number(info.videoInfo[nVideoCount].nStreamIndex)).append(":\n");
+			result.append("packet info: \n");
+			result.append("max=").append(QString::number(info.videoInfo[nVideoCount].nMaxPacketSize)).append(",");;
+			result.append("min=").append(QString::number(info.videoInfo[nVideoCount].nMinPacketSize)).append(",");
+			result.append("ave=").append(QString::number(info.videoInfo[nVideoCount].nAvePacketSize)).append("");
+			result.append("\ninterval info: \n");
+			result.append("max=").append(QString::number(info.videoInfo[nVideoCount].dMaxInterval)).append(",");
+			result.append("min=").append(QString::number(info.videoInfo[nVideoCount].dMinInterval)).append(",");
+			result.append("ave=").append(QString::number(info.videoInfo[nVideoCount].dAveInterval)).append("");
 
-            result.append("\ncontinue = ").append(QString::number(info.videoInfo[nVideoCount].ptsContinue.nFlag)).append(" ");
-            if(!info.videoInfo[nVideoCount].ptsContinue.nFlag)
-                result.append("pts=").append(QString::number(info.videoInfo[nVideoCount].ptsContinue.pts)).append(" ");
+			result.append("\ncontinue = ").append(QString::number(info.videoInfo[nVideoCount].ptsContinue.nFlag)).append(" ");
+			if(!info.videoInfo[nVideoCount].ptsContinue.nFlag)
+				result.append("pts=").append(QString::number(info.videoInfo[nVideoCount].ptsContinue.pts)).append(" ");
 
-            result.append("\nnframe=").append(QString::number(info.videoInfo[nVideoCount].nFrameCount)).append(" ");
-            result.append("nkeyframe=").append(QString::number(info.videoInfo[nVideoCount].nKeyFrameCount)).append(" ");
-            result.append("\n");
-        }
-        nVideoCount++;
-    }
+			result.append("\nnframe=").append(QString::number(info.videoInfo[nVideoCount].nFrameCount)).append(" ");
+			result.append("nkeyframe=").append(QString::number(info.videoInfo[nVideoCount].nKeyFrameCount)).append(" ");
+			result.append("\n");
+		}
+		nVideoCount++;
+	}
 	while(nAudioCount < info.nAudioCount){
 		if(info.audioInfo[nAudioCount].nFrameCount > 0){
 			result.append("\n");
-            result.append("audio ").append(QString::number(info.audioInfo[nAudioCount].nStreamIndex)).append(":\n");
-            result.append("packet info: \n");
-            result.append("max=").append(QString::number(info.audioInfo[nAudioCount].nMaxPacketSize)).append(",");
-            result.append("min=").append(QString::number(info.audioInfo[nAudioCount].nMinPacketSize)).append(",");
-            result.append("ave=").append(QString::number(info.audioInfo[nAudioCount].nAvePacketSize)).append("");
+			result.append("audio ").append(QString::number(info.audioInfo[nAudioCount].nStreamIndex)).append(":\n");
+			result.append("packet info: \n");
+			result.append("max=").append(QString::number(info.audioInfo[nAudioCount].nMaxPacketSize)).append(",");
+			result.append("min=").append(QString::number(info.audioInfo[nAudioCount].nMinPacketSize)).append(",");
+			result.append("ave=").append(QString::number(info.audioInfo[nAudioCount].nAvePacketSize)).append("");
 
-            result.append("\ncontinue = ").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.nFlag)).append(" ");
-            if(!info.audioInfo[nAudioCount].ptsContinue.nFlag)
-                result.append("pts=").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.pts)).append(" ");
+			result.append("\ncontinue = ").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.nFlag)).append(" ");
+			if(!info.audioInfo[nAudioCount].ptsContinue.nFlag)
+				result.append("pts=").append(QString::number(info.audioInfo[nAudioCount].ptsContinue.pts)).append(" ");
 
-            result.append("\nnframe=").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
+			result.append("\nnframe=").append(QString::number(info.audioInfo[nAudioCount].nFrameCount));
 			result.append("\n");
 		}
 		nAudioCount++;
 	}
-    while(nSubCount < info.nSubCount){
-        if(info.subInfo[nSubCount].nFrameCount > 0){
-            result.append("\n");
-            result.append("sub ").append(QString::number(info.subInfo[nSubCount].nStreamIndex)).append(":\n");
-            result.append("packet info: \n");
-            result.append("max=").append(QString::number(info.subInfo[nSubCount].nMaxPacketSize)).append(",");
-            result.append("min=").append(QString::number(info.subInfo[nSubCount].nMinPacketSize)).append(",");
-            result.append("ave=").append(QString::number(info.subInfo[nSubCount].nAvePacketSize)).append("");
+	while(nSubCount < info.nSubCount){
+		if(info.subInfo[nSubCount].nFrameCount > 0){
+			result.append("\n");
+			result.append("sub ").append(QString::number(info.subInfo[nSubCount].nStreamIndex)).append(":\n");
+			result.append("packet info: \n");
+			result.append("max=").append(QString::number(info.subInfo[nSubCount].nMaxPacketSize)).append(",");
+			result.append("min=").append(QString::number(info.subInfo[nSubCount].nMinPacketSize)).append(",");
+			result.append("ave=").append(QString::number(info.subInfo[nSubCount].nAvePacketSize)).append("");
 
-            result.append("\ncontinue = ").append(QString::number(info.subInfo[nSubCount].ptsContinue.nFlag)).append(" ");
-            if(!info.subInfo[nSubCount].ptsContinue.nFlag)
-                result.append("pts=").append(QString::number(info.subInfo[nSubCount].ptsContinue.pts)).append(" ");
+			result.append("\ncontinue = ").append(QString::number(info.subInfo[nSubCount].ptsContinue.nFlag)).append(" ");
+			if(!info.subInfo[nSubCount].ptsContinue.nFlag)
+				result.append("pts=").append(QString::number(info.subInfo[nSubCount].ptsContinue.pts)).append(" ");
 
-            result.append("\nnframe=").append(QString::number(info.subInfo[nSubCount].nFrameCount));
-            result.append("\n");
-        }
-        nSubCount++;
-    }
+			result.append("\nnframe=").append(QString::number(info.subInfo[nSubCount].nFrameCount));
+			result.append("\n");
+		}
+		nSubCount++;
+	}
 
 	ui->txt_unpackinfo->setText(result);
 }
@@ -381,8 +452,8 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 
 	QString sql;
 	QString result;
-    QString result_start="32FB:";
-    QString result_end	="32LB:";
+	QString result_start="32FB:";
+	QString result_end	="32LB:";
 
 	db.open();
 	int id = ui->tvw_unpack->model()->index(index.row(),0).data().toString().toInt();
@@ -397,22 +468,22 @@ void MainWindow::on_tvw_unpack_clicked(const QModelIndex &index)
 		result.append(result_start);
 		for(int i = 0; i < data_start.length(); i++){
 			char tmp[3];
-            snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_start.data())[i]));
-            if((i+1) % 8 == 0)
-                result.append(tmp).append("   ");
-            else
-                result.append(tmp).append(" ");
+			snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_start.data())[i]));
+			if((i+1) % 8 == 0)
+				result.append(tmp).append("   ");
+			else
+				result.append(tmp).append(" ");
 		}
 		result.append("\n");
 
 		result.append(result_end);
 		for(int i = 0; i < data_end.length(); i++){
 			char tmp[3];
-            snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_end.data())[i]));
-            if((i+1) % 8 == 0)
-                result.append(tmp).append("   ");
-            else
-                result.append(tmp).append(" ");
+			snprintf(tmp,sizeof(tmp),"%02x",(unsigned char)((data_end.data())[i]));
+			if((i+1) % 8 == 0)
+				result.append(tmp).append("   ");
+			else
+				result.append(tmp).append(" ");
 		}
 
 		ui->txt_pkt_data->setText(result);
@@ -450,50 +521,50 @@ void MainWindow::on_btn_stop_clicked()
 
 void MainWindow::on_btn_execsql_clicked()
 {
-    QString where = ui->txt_where->text().trimmed();
-    if(where.length() < 5)
-        return;
-    lock();
-    if(getUnpackStatus() &	(UNPACK_FINISH | UNPACK_STOP)){
-        QString sql = SQL_SELECT + where;
-        bindTableView(sql);
-    }else{
-        unlock();
-        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
-        return;
-    }
-    unlock();
+	QString where = ui->txt_where->text().trimmed();
+	if(where.length() < 5)
+		return;
+	lock();
+	if(getUnpackStatus() &	(UNPACK_FINISH | UNPACK_STOP)){
+		QString sql = SQL_SELECT + where;
+		bindTableView(sql);
+	}else{
+		unlock();
+		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+		return;
+	}
+	unlock();
 }
 
 void MainWindow::on_btn_execsql_2_clicked()
 {
-    QString sql = ui->txt_select->text().trimmed();
-    if(sql.length() < 5)
-        return;
-    lock();
-    if(getUnpackStatus() &	(UNPACK_FINISH | UNPACK_STOP)){
-        QString result;
-        db.open();
-        QSqlQuery query(db);
-        query.exec(sql);
-        if(true == query.first()){
-            int col_num = query.record().count();
-            for(int col = 0; col < col_num; col++){
-                result.append(query.value(col).toByteArray().data());
-                if(col + 1 != col_num)
-                    result.append(" , ");
-            }
+	QString sql = ui->txt_select->text().trimmed();
+	if(sql.length() < 5)
+		return;
+	lock();
+	if(getUnpackStatus() &	(UNPACK_FINISH | UNPACK_STOP)){
+		QString result;
+		db.open();
+		QSqlQuery query(db);
+		query.exec(sql);
+		if(true == query.first()){
+			int col_num = query.record().count();
+			for(int col = 0; col < col_num; col++){
+				result.append(query.value(col).toByteArray().data());
+				if(col + 1 != col_num)
+					result.append(" , ");
+			}
 
-            ui->txt_selectout->setText(result);
-        }else{
-            QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("sql error!!	"));
-        }
+			ui->txt_selectout->setText(result);
+		}else{
+			QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("sql error!!	"));
+		}
 
-        db.close();
-    }else{
-        unlock();
-        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
-        return;
-    }
-    unlock();
+		db.close();
+	}else{
+		unlock();
+		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+		return;
+	}
+	unlock();
 }

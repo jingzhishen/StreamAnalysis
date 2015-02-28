@@ -12,12 +12,14 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    unpackthread.cpp
+    unpackthread.cpp \
+    packet_data_save.cpp
 
 HEADERS  += mainwindow.h \
     third_ffmpeg.h \
     unpackthread.h \
-    analysistype.h
+    analysistype.h \
+    packet_data_save.h
 
 FORMS    += mainwindow.ui
 
