@@ -64,10 +64,10 @@ private slots:
     void on_btn_stop_clicked();
     void on_btn_execsql_clicked();
     void on_btn_execsql_2_clicked();
-    void show_unpack_menu();
-    void row_sel_save();
-    void row_index_save();
-    void all_index_save();
+    void slot_show_unpack_menu();
+    void slot_save_row_cur();
+    void slot_save_row_index();
+    void slot_save_all_index();
 
 private:
 	Ui::MainWindow *ui;
@@ -78,11 +78,12 @@ private:
     QMenu *m_menu;
 
     UnpackThread *m_pUnpackThread;
+    PacketDataSaveThread *m_pSaveThread;
     QTimer *m_timer;
 
 	QString m_fileName;
     DataSaveType m_saveType;
-    QMap<int, int> m_saveSelect;
+    QList<int> m_saveSelect;
 	QWaitCondition m_waitCond;
 	QMutex m_mutex;
     UnpackStatus m_unpackStatus;

@@ -72,7 +72,7 @@ typedef enum{
 
 typedef enum{
     SAVE_NONE,
-    SAVE_ROW,
+    SAVE_ROW_SEL,
     SAVE_ROW_INDEX,
     SAVE_ALL_INDEX
 }DataSaveType;

@@ -27,6 +27,7 @@ private:
     MainWindow *m_pWindow;
 
     int64_t getFileSize(QString filename);
+    int savePacketData(int id, AVPacket *pkt);
 };
 
 #endif // PACKET_DATA_SAVE_H

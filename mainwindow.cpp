@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "third_ffmpeg.h"
 #include "unpackthread.h"
+#include "packet_data_save.h"
 
 #include <QFileDialog>
 
@@ -24,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	//connect(m_timer,SIGNAL(timeout()),this,SLOT(slot_bind_tableview()));
 	ui->tvw_unpack->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(ui->tvw_unpack, SIGNAL(customContextMenuRequested(const QPoint&)),
-			this, SLOT(show_unpack_menu()));//this是datatable所在窗口
+            this, SLOT(slot_show_unpack_menu()));//this是datatable所在窗口
 }
 
 MainWindow::~MainWindow()
@@ -38,7 +39,7 @@ MainWindow::~MainWindow()
 	QFile::remove(DB_FILENAME);
 }
 
-void MainWindow::show_unpack_menu()
+void MainWindow::slot_show_unpack_menu()
 {
 	m_menu = new QMenu(ui->tvw_unpack);
 
@@ -46,64 +47,99 @@ void MainWindow::show_unpack_menu()
 	QAction *action2 = m_menu->addAction("保存选中行对应索引包数据");
 	QAction *action3 = m_menu->addAction("保存全部索引包数据");
 
-	connect(action1, SIGNAL(triggered(bool)), this, SLOT(row_sel_save()));
-	connect(action2, SIGNAL(triggered(bool)), this, SLOT(row_index_save()));
-	connect(action3, SIGNAL(triggered(bool)), this, SLOT(all_index_save()));
+    connect(action1, SIGNAL(triggered(bool)), this, SLOT(slot_save_row_cur()));
+    connect(action2, SIGNAL(triggered(bool)), this, SLOT(slot_save_row_index()));
+    connect(action3, SIGNAL(triggered(bool)), this, SLOT(slot_save_all_index()));
 
 	m_menu->exec(QCursor::pos());//在当前鼠标位置显示
-	//    m_menu->exec(pos);//是在viewport显示
 }
 
-void MainWindow::row_sel_save()
+void MainWindow::slot_save_row_cur()
 {
-	QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
-	if(indexes.count() == 0)
-	{
-		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
-		return;
-	}
+    QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
+	QModelIndex index;
 
-	lock();
-	if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
-		unlock();
-		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
-		return;
-	}
-	unlock();
-}
+    if(indexes.count() == 0)
+    {
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
+        return;
+    }
 
-void MainWindow::row_index_save()
-{
-	QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
-	if(indexes.count() == 0)
-	{
-		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
-		return;
-	}
+    lock();
+    if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+        unlock();
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+        return;
+    }
+    unlock();
 
-	lock();
-	if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
-		unlock();
-		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
-		return;
+    m_saveSelect.clear();
+	foreach(index, indexes) {
+        int id = ui->tvw_unpack->model()->index(index.row(),0).data().toString().toInt();
+        m_saveSelect.append(id);
 	}
+	m_saveType = SAVE_ROW_SEL;
+    m_pSaveThread = new PacketDataSaveThread(this);
 	setUnpackStatus(UNPACK_DATA_SAVING);
-	unlock();
-
-    m_saveType = SAVE_ROW;
-    m_saveType = SAVE_ROW_INDEX;
-    m_saveType = SAVE_ALL_INDEX;
+	slot_update_status(UNPACK_DATA_SAVING);
+	m_pSaveThread->start();
 }
 
-void MainWindow::all_index_save()
+void MainWindow::slot_save_row_index()
 {
-	lock();
-	if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
-		unlock();
-		QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
-		return;
-	}
-	unlock();
+    QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
+    QModelIndex index;
+
+    if(indexes.count() == 0)
+    {
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
+        return;
+    }
+
+    lock();
+    if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+        unlock();
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+        return;
+    }
+    unlock();
+
+    m_saveSelect.clear();
+    foreach(index, indexes) {
+        int id = ui->tvw_unpack->model()->index(index.row(),1).data().toString().toInt();
+        m_saveSelect.append(id);
+    }
+    m_saveType = SAVE_ROW_INDEX;
+    m_pSaveThread = new PacketDataSaveThread(this);
+    setUnpackStatus(UNPACK_DATA_SAVING);
+    slot_update_status(UNPACK_DATA_SAVING);
+    m_pSaveThread->start();
+}
+
+void MainWindow::slot_save_all_index()
+{
+    QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
+
+    if(indexes.count() == 0)
+    {
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
+        return;
+    }
+
+    lock();
+    if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+        unlock();
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+        return;
+    }
+    unlock();
+
+    m_saveSelect.clear();
+    m_saveType = SAVE_ALL_INDEX;
+    m_pSaveThread = new PacketDataSaveThread(this);
+    setUnpackStatus(UNPACK_DATA_SAVING);
+    slot_update_status(UNPACK_DATA_SAVING);
+    m_pSaveThread->start();
 }
 
 void MainWindow::initStatusBar()
@@ -270,6 +306,9 @@ void MainWindow::slot_update_status(UnpackStatus status)
 		case UNPACK_STOP:
 			m_lblStatus->setText("status:	stop...");
 			break;
+		case UNPACK_DATA_SAVING:
+			m_lblStatus->setText("status:	packet data saving...");
+			break;
 		default:break;
 	}
 	unlock();
@@ -381,6 +420,7 @@ void MainWindow::on_btn_openfile_clicked()
 		ui->lineEdit->setText(fileName);
 
 		setUnpackStatusWithLock(UNPACK_START);
+		slot_update_status(UNPACK_START);
 		m_lblStatus->setText("status:	start...");
 		m_pUnpackThread->start();
 	}
