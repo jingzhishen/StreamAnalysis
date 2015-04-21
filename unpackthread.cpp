@@ -170,6 +170,7 @@ void UnpackThread::run()
 {
 	AVFormatContext *ic = NULL;
 	AVPacket pkt;
+	long long value_last = 0;
 	int wanted_stream[AVMEDIA_TYPE_NB];
 	QMap<int, VPacketInfo> mPackets;
 	int err, ret = 0;
@@ -263,14 +264,20 @@ void UnpackThread::run()
 			if(0 == strcmp(ic->iformat->name, "mov,mp4,m4a,3gp,3g2,mj2")){
 				if(pts_sec > 0 && ic->duration > 0){
 					long long value = PROGRESS_RANGE * pts_sec * 1000 * 1000 / ic->duration;
-					emit update_progressbar((int)value);
+					if(value - value_last >= 10){
+						value_last = value;
+						emit update_progressbar((int)value);
+					}
 				}
 			}else{
 				if(filesize > 0 && pkt.pos > 0){
 					pos_max = qMax(pkt.pos, pos_max);
 					if(pos_max < filesize){
 						long long value = (PROGRESS_RANGE - 1) * pos_max / filesize;
-						emit update_progressbar((int)value);
+						if(value - value_last >= 10){
+							value_last = value;
+							emit update_progressbar((int)value);
+						}
 					}else{
 						qDebug() << "pos_max = " << pos_max << ",filesize = " << filesize <<endl;
 					}
