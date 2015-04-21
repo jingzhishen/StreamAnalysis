@@ -74,8 +74,17 @@ typedef enum{
     SAVE_NONE,
     SAVE_ROW_SEL,
     SAVE_ROW_INDEX,
-    SAVE_ALL_INDEX
+    SAVE_ROW_INDEX_ENTIRE,
+    SAVE_ALL_INDEX,
+    SAVE_ALL_INDEX_ENTIRE
 }DataSaveType;
+
+typedef struct{
+    unsigned char *data;
+    int len;
+    int write_size;
+}DataBuffer;
+
 
 Q_DECLARE_METATYPE(UnpackStatus)
 Q_DECLARE_METATYPE(UnPackInfo)

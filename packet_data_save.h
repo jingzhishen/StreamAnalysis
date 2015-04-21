@@ -9,6 +9,7 @@
 
 class MainWindow;
 
+const int DATA_BUF_SIZE = 0x400000;
 
 class PacketDataSaveThread: public QThread
 {
@@ -28,6 +29,7 @@ private:
 
     int64_t getFileSize(QString filename);
     int savePacketData(int id, AVPacket *pkt);
+    int savePacketDataEntire(int stream_index, DataBuffer *packet);
 };
 
 #endif // PACKET_DATA_SAVE_H

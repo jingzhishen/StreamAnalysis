@@ -68,6 +68,8 @@ private slots:
     void slot_save_row_cur();
     void slot_save_row_index();
     void slot_save_all_index();
+    void slot_save_row_index_entire();
+    void slot_save_all_index_entire();
 
 private:
 	Ui::MainWindow *ui;

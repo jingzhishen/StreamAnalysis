@@ -44,12 +44,16 @@ void MainWindow::slot_show_unpack_menu()
 	m_menu = new QMenu(ui->tvw_unpack);
 
 	QAction *action1 = m_menu->addAction("保存选中行包数据");
-	QAction *action2 = m_menu->addAction("保存选中行对应索引包数据");
-	QAction *action3 = m_menu->addAction("保存全部索引包数据");
+	QAction *action2 = m_menu->addAction("保存选中行对应索引包数据(单个)");
+	QAction *action3 = m_menu->addAction("保存全部索引包数据(单个)");
+	QAction *action4 = m_menu->addAction("保存选中行对应索引包数据(整体)");
+	QAction *action5 = m_menu->addAction("保存全部索引包数据(整体)");
 
     connect(action1, SIGNAL(triggered(bool)), this, SLOT(slot_save_row_cur()));
     connect(action2, SIGNAL(triggered(bool)), this, SLOT(slot_save_row_index()));
     connect(action3, SIGNAL(triggered(bool)), this, SLOT(slot_save_all_index()));
+    connect(action4, SIGNAL(triggered(bool)), this, SLOT(slot_save_row_index_entire()));
+    connect(action5, SIGNAL(triggered(bool)), this, SLOT(slot_save_all_index_entire()));
 
 	m_menu->exec(QCursor::pos());//在当前鼠标位置显示
 }
@@ -141,6 +145,65 @@ void MainWindow::slot_save_all_index()
     slot_update_status(UNPACK_DATA_SAVING);
     m_pSaveThread->start();
 }
+
+void MainWindow::slot_save_row_index_entire()
+{
+    QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
+    QModelIndex index;
+
+    if(indexes.count() == 0)
+    {
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
+        return;
+    }
+
+    lock();
+    if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+        unlock();
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+        return;
+    }
+    unlock();
+
+    m_saveSelect.clear();
+    foreach(index, indexes) {
+        int id = ui->tvw_unpack->model()->index(index.row(),1).data().toString().toInt();
+        m_saveSelect.append(id);
+    }
+    m_saveType = SAVE_ROW_INDEX_ENTIRE;
+    m_pSaveThread = new PacketDataSaveThread(this);
+    setUnpackStatus(UNPACK_DATA_SAVING);
+    slot_update_status(UNPACK_DATA_SAVING);
+    m_pSaveThread->start();
+}
+
+void MainWindow::slot_save_all_index_entire()
+{
+    QModelIndexList indexes = ui->tvw_unpack->selectionModel()->selectedIndexes();
+
+    if(indexes.count() == 0)
+    {
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("select nothing!!	"));
+        return;
+    }
+
+    lock();
+    if(!(getUnpackStatus() & (UNPACK_FINISH | UNPACK_STOP))){
+        unlock();
+        QMessageBox::warning(0, QObject::tr("warning  "),QObject::tr("not finish yet!!	"));
+        return;
+    }
+    unlock();
+
+    m_saveSelect.clear();
+    m_saveType = SAVE_ALL_INDEX_ENTIRE;
+    m_pSaveThread = new PacketDataSaveThread(this);
+    setUnpackStatus(UNPACK_DATA_SAVING);
+    slot_update_status(UNPACK_DATA_SAVING);
+    m_pSaveThread->start();
+}
+
+
 
 void MainWindow::initStatusBar()
 {
@@ -401,7 +464,7 @@ void MainWindow::on_btn_openfile_clicked()
 	unlock();
 
 	static QString dir = ".";
-	QString s_filefilter = tr("Media Files(*.flv *.rm *.rmvb *.real *.mp4 *.mov *.avi *.mpg *.mpeg  *.mkv *.ts *.m2ts *.3gp *.vob *.dat *.asf  *.mp3 *.aac *.m4a *.ac3 *.wav *.mjpeg)");
+	QString s_filefilter = tr("Media Files(*.flv *.rm *.rmvb *.real *.mp4 *.mov *.avi *.mpg *.mpeg  *.mkv *.ts *.m2ts *.3gp *.vob *.dat *.asf  *.mp3 *.aac *.m4a *.ac3 *.wav *.mjpeg *.h264 *.es *.esa *.esv *.avs)");
 	QString fileName = QFileDialog::getOpenFileName(this, tr("Open Media"), dir, s_filefilter);
 	if(!fileName.isEmpty()){
 		if(fileName.count('/') > 0)

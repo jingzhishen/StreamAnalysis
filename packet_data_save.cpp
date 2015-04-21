@@ -38,7 +38,7 @@ int PacketDataSaveThread::savePacketData(int id, AVPacket *pkt)
 		dir.mkdir("./pkt/");
 	filename.append(QString::number(pkt->stream_index)).append("_").append(QString::number(id)).append(".pkt");
 
-	QFile file(filename);
+    QFile file(filename);
 	file.open(QIODevice::WriteOnly);
 	file.write(QByteArray((const char *)pkt->data, pkt->size));
 	file.close();
@@ -46,10 +46,32 @@ int PacketDataSaveThread::savePacketData(int id, AVPacket *pkt)
 	return ret;
 }
 
+int PacketDataSaveThread::savePacketDataEntire(int stream_index, DataBuffer *packet)
+{
+    int ret = 0;
+    QDir dir;
+    QString filename = "./pkt/";
+
+    if(!dir.exists("./pkt/"))
+        dir.mkdir("./pkt/");
+    if(!packet)
+        return -1;
+    filename.append(QString::number(stream_index)).append(".es");
+
+    QFile file(filename);
+    file.open(QIODevice::WriteOnly|QIODevice::Append);
+    file.write(QByteArray((const char *)packet->data, packet->write_size));
+    file.close();
+
+    return ret;
+}
+
+
 void PacketDataSaveThread::run()
 {
 	AVFormatContext *ic = NULL;
 	AVPacket pkt;
+    QMap<int, DataBuffer> mDatas;
 	int wanted_stream[AVMEDIA_TYPE_NB];
 	int err, ret = 0;
 	int64_t filesize = 0, pos_max = 0;
@@ -143,8 +165,7 @@ void PacketDataSaveThread::run()
 								need_save = 1;
 								m_pWindow->m_saveSelect.erase(it);
 								break;
-							}
-							else {
+							}else {
 								++it;
 							}
 						}
@@ -158,8 +179,7 @@ void PacketDataSaveThread::run()
                             if(*it == pkt.stream_index ) {
 								need_save = 1;
 								break;
-							}
-							else {
+							}else {
 								++it;
 							}
 						}
@@ -168,6 +188,62 @@ void PacketDataSaveThread::run()
 				case SAVE_ALL_INDEX:
 					need_save = 1;
 					break;
+                case SAVE_ROW_INDEX_ENTIRE:
+                    {
+                        int entire_save = 0;
+                        QList<int>::Iterator it = m_pWindow->m_saveSelect.begin();
+                        QList<int>::Iterator end = m_pWindow->m_saveSelect.end();
+                        while ( it != end ) {
+                            if(*it == pkt.stream_index ) {
+                                entire_save = 1;
+                                break;
+                            }else {
+                                ++it;
+                            }
+                        }
+                        if(!entire_save)
+                            break;
+                    }
+                case SAVE_ALL_INDEX_ENTIRE:
+                {
+                    if(pkt.size >= DATA_BUF_SIZE / 2){
+                        qDebug() << "pkt.size if too large" <<endl;
+                        m_pWindow->setUnpackStatusWithLock(UNPACK_ERROR);
+                        emit update_status(UNPACK_ERROR);
+                        break;
+                    }
+                    QMap<int, DataBuffer>::iterator iter = mDatas.find(pkt.stream_index);
+                    if(iter == mDatas.end()){
+                        DataBuffer df;
+                        memset(&df, 0, sizeof(DataBuffer));
+                        df.data = (unsigned char *)malloc(DATA_BUF_SIZE);
+                        df.len = DATA_BUF_SIZE;
+                        if(!df.data){
+                            qDebug() << "out of mem df" <<endl;
+                            m_pWindow->setUnpackStatusWithLock(UNPACK_ERROR);
+                            emit update_status(UNPACK_ERROR);
+                            break;
+                        }
+                        mDatas[pkt.stream_index] = df;
+                    }
+                    DataBuffer &df = mDatas[pkt.stream_index];
+                    if(pkt.size + df.write_size > df.len){
+                        //need save to file
+                        if(savePacketDataEntire(pkt.stream_index, &df)){
+                            //save error
+                            m_pWindow->setUnpackStatusWithLock(UNPACK_ERROR);
+                            emit update_status(UNPACK_ERROR);
+                            break;
+                        }
+                        df.write_size = 0;
+                    }
+
+                    memcpy(df.data + df.write_size, pkt.data, pkt.size);
+                    df.write_size += pkt.size;
+
+                    break;
+                }
+
 				default:
 					break;
 			}
@@ -190,11 +266,20 @@ void PacketDataSaveThread::run()
 		emit update_status(UNPACK_FINISH);
 	}
 
-	av_free_packet(&pkt);
-	if(ic)
-		avformat_close_input(&ic);
-	return;
 ERR:
+    QMap<int,DataBuffer>::iterator iter;
+    for(iter = mDatas.begin(); iter != mDatas.end(); ++iter)
+    {
+        DataBuffer &df = iter.value();
+        if(df.write_size > 0){
+            if(savePacketDataEntire(iter.key(), &df)){
+                //save error
+                m_pWindow->setUnpackStatusWithLock(UNPACK_ERROR);
+                emit update_status(UNPACK_ERROR);
+            }
+        }
+        free(df.data);
+    }
 	av_free_packet(&pkt);
 	if(ic)
 		avformat_close_input(&ic);
