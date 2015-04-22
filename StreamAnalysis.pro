@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui sql
+#QT += core gui sql widgets
 
 TARGET = StreamAnalysis
 TEMPLATE = app
@@ -27,4 +28,4 @@ FORMS    += mainwindow.ui
 INCLUDEPATH += . /usr/local/include
 INCLUDEPATH += ./liboutput/ffmpeg/include
 
-LIBS += liboutput/ffmpeg/lib/libavformat.a liboutput/ffmpeg/lib/libavcodec.a liboutput/ffmpeg/lib/libavutil.a
+LIBS += liboutput/ffmpeg/lib/libavformat.a liboutput/ffmpeg/lib/libavcodec.a liboutput/ffmpeg/lib/libavutil.a -lz
