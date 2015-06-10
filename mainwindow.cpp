@@ -321,7 +321,15 @@ void MainWindow::bindTableView(const QString &sql)
 	model->setHeaderData(8,Qt::Horizontal,QObject::tr("dur_sec"));
 	model->setHeaderData(9,Qt::Horizontal,QObject::tr("pts_sec"));
 
+	/*
+	 * model can cache 256 data only
+	 * tableview will not display data rightly when pull-down scrollbar 
+	 * sometimes it is ok if we don't call fetchMore, we don't know reason
+	 */
+	while (model->canFetchMore())
+		model->fetchMore();
 	ui->tvw_unpack->setModel(model);
+
 	ui->tvw_unpack->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
 	ui->tvw_unpack->setColumnWidth(1,40);
 	ui->tvw_unpack->setColumnWidth(2,40);
