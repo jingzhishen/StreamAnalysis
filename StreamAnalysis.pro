@@ -28,4 +28,4 @@ FORMS    += mainwindow.ui
 INCLUDEPATH += . /usr/local/include
 INCLUDEPATH += ./liboutput/ffmpeg/include
 
-LIBS += liboutput/ffmpeg/lib/libavformat.a liboutput/ffmpeg/lib/libavcodec.a liboutput/ffmpeg/lib/libavutil.a -lz
+LIBS += ./liboutput/ffmpeg/lib/libavformat.a ./liboutput/ffmpeg/lib/libavcodec.a ./liboutput/ffmpeg/lib/libavutil.a -lz
